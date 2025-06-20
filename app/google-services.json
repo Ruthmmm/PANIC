@@ -1,0 +1,67 @@
+{
+  "project_info": {
+    "project_number": "556016643036",
+    "project_id": "alerta-d0ca2",
+    "storage_bucket": "alerta-d0ca2.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:556016643036:android:fb1b93378d6bc49185fd19",
+        "android_client_info": {
+          "package_name": "com.example.alerta"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCJB4uIq1N7AMsWAwYX3ZNZtqc_KuuaMDQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:556016643036:android:b112e7f155feb27b85fd19",
+        "android_client_info": {
+          "package_name": "com.example.alertaph"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCJB4uIq1N7AMsWAwYX3ZNZtqc_KuuaMDQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:556016643036:android:3303396f588bdae885fd19",
+        "android_client_info": {
+          "package_name": "com.example.panico"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCJB4uIq1N7AMsWAwYX3ZNZtqc_KuuaMDQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
