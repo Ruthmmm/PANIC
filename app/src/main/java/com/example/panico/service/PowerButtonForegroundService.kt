@@ -25,6 +25,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import java.util.UUID
+import com.google.firebase.auth.FirebaseAuth
 
 class PowerButtonForegroundService : Service() {
     private val channelId = "power_button_channel"
@@ -117,8 +118,31 @@ class PowerButtonForegroundService : Service() {
         registerReceiver(screenReceiver, filter)
     }
 
+    private suspend fun getCurrentUserGroupId(userId: String): String? {
+        val userDoc = db.collection("users").document(userId).get().await()
+        return userDoc.getString("groupId")
+    }
+
+    private suspend fun getAlertTypeIdByName(name: String): String? {
+        val alertTypesSnapshot = db.collection("alertTypes").get().await()
+        return alertTypesSnapshot.documents.firstOrNull { it.getString("name") == name }?.id
+    }
+
+    private suspend fun replaceActiveAlerts(userId: String) {
+        val activeAlerts = db.collection("alerts")
+            .whereEqualTo("active", true)
+            .whereEqualTo("userId", userId)
+            .get().await()
+        for (doc in activeAlerts.documents) {
+            db.collection("alerts").document(doc.id)
+                .update("active", false, "status", "reemplazada")
+        }
+    }
+
     private suspend fun sendAlertAndVibrate() {
         try {
+            val currentUser = FirebaseAuth.getInstance().currentUser ?: return
+            val userId = currentUser.uid
             val fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
             if (androidx.core.app.ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION) != android.content.pm.PackageManager.PERMISSION_GRANTED &&
                 androidx.core.app.ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_COARSE_LOCATION) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
@@ -127,14 +151,26 @@ class PowerButtonForegroundService : Service() {
             }
             val location = fusedLocationClient.lastLocation.await()
             val geoPoint = if (location != null) GeoPoint(location.latitude, location.longitude) else null
+            // Desactivar alertas activas previas
+            replaceActiveAlerts(userId)
+            // Obtener groupId y alertTypeId
+            val groupId = getCurrentUserGroupId(userId) ?: ""
+            val alertTypeId = getAlertTypeIdByName("ALERTA CRÍTICA") ?: ""
+            if (groupId.isBlank() || alertTypeId.isBlank()) {
+                vibrateStandard()
+                return
+            }
             val alert = Alert(
                 id = UUID.randomUUID().toString(),
                 active = true,
                 userId = userId,
+                groupId = groupId,
+                alertTypeId = alertTypeId,
                 location = geoPoint,
                 timestamp = Timestamp.now(),
-                message = "Alerta enviada por botón de encendido",
-                status = "active"
+                message = "",
+                status = "active",
+                observation = "alerta enviada desde botón de encendido"
             )
             db.collection("alerts").add(alert).await()
         } catch (e: Exception) {

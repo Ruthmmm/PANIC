@@ -87,12 +87,16 @@ import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.AssignmentInd
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Analytics
 import androidx.activity.compose.BackHandler
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.foundation.clickable
 import androidx.compose.ui.zIndex
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 
 
 @OptIn(ExperimentalPermissionsApi::class, androidx.compose.material3.ExperimentalMaterial3Api::class)
@@ -144,7 +148,9 @@ fun MapScreen() {
         Triple("Historial de alertas", Icons.Filled.History, ""),
         Triple("Usuarios", Icons.Filled.Person, ""),
         Triple("Grupos", Icons.Filled.Group, ""),
-        Triple("Perfil", Icons.Filled.AssignmentInd, "")
+        Triple("Crear notificaciones", Icons.Filled.Add, ""),
+        Triple("Perfil", Icons.Filled.AssignmentInd, ""),
+        Triple("Estadísticas", Icons.Filled.Analytics, "")
     )
     var selectedItem by remember { mutableStateOf(0) }
 
@@ -203,6 +209,11 @@ fun MapScreen() {
         }
     }
 
+    // Estados para los diálogos de confirmación y comentario
+    var showConfirmEndAlert by remember { mutableStateOf(false) }
+    var showCommentDialog by remember { mutableStateOf(false) }
+    var commentText by remember { mutableStateOf("") }
+
     Box(Modifier.fillMaxSize()) {
         // Scrim
         if (drawerOpen) {
@@ -258,6 +269,8 @@ fun MapScreen() {
                 }
                 Divider()
                 drawerItems.forEachIndexed { index, triple ->
+                    val interactionSource = remember { MutableInteractionSource() }
+                    val isPressed by interactionSource.collectIsPressedAsState()
                     NavigationDrawerItem(
                         label = {
                             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -266,9 +279,11 @@ fun MapScreen() {
                                 Text(triple.first, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             }
                         },
-                        selected = selectedItem == index,
+                        selected = false, // Nunca sombreado permanente
                         onClick = { selectedItem = index },
-                        modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
+                        modifier = Modifier
+                            .padding(NavigationDrawerItemDefaults.ItemPadding),
+                        interactionSource = interactionSource
                     )
                 }
                 Spacer(modifier = Modifier.weight(1f))
@@ -276,7 +291,11 @@ fun MapScreen() {
                     "Términos y condiciones",
                     modifier = Modifier
                         .align(Alignment.CenterHorizontally)
-                        .padding(bottom = 24.dp),
+                        .padding(bottom = 24.dp)
+                        .clickable { 
+                            // Aquí puedes agregar la acción cuando se haga clic en términos y condiciones
+                            // Por ejemplo, abrir una pantalla o mostrar un diálogo
+                        },
                     fontStyle = FontStyle.Italic,
                     fontSize = 13.sp,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
@@ -363,7 +382,7 @@ fun MapScreen() {
                                         onClick = {
                                             userAction.value = true
                                             if (!alertSent) mapViewModel.sendAlert()
-                                            else mapViewModel.endAlert()
+                                            else showConfirmEndAlert = true
                                         },
                                         modifier = Modifier
                                             .fillMaxWidth(0.8f)
@@ -426,7 +445,83 @@ fun MapScreen() {
                 }
             }
         }
+
+    // Diálogo de confirmación para terminar alerta
+    if (showConfirmEndAlert) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { /* No hacer nada para evitar cierre */ },
+            title = { Text("¿Terminar alerta?") },
+            text = { Text("¿Estás seguro de terminar la alerta?") },
+            confirmButton = {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Button(onClick = { showConfirmEndAlert = false }) { 
+                        Text("No") 
+                    }
+                    Button(onClick = {
+                        showConfirmEndAlert = false
+                        showCommentDialog = true
+                    }) { 
+                        Text("Sí") 
+                    }
+                }
+            },
+            dismissButton = { /* Vacío porque los botones están en confirmButton */ },
+            properties = androidx.compose.ui.window.DialogProperties(
+                dismissOnBackPress = false,
+                dismissOnClickOutside = false
+            )
+        )
     }
+    // Diálogo para comentario opcional
+    if (showCommentDialog) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { /* No hacer nada para evitar cierre */ },
+            title = { Text("Comentario opcional") },
+            text = {
+                Column {
+                    Text("¿Deseas dejar un comentario sobre la alerta? (opcional)")
+                    Spacer(modifier = Modifier.height(8.dp))
+                    androidx.compose.material3.OutlinedTextField(
+                        value = commentText,
+                        onValueChange = { commentText = it },
+                        placeholder = { Text("Escribe tu comentario...") },
+                        singleLine = true
+                    )
+                }
+            },
+            confirmButton = {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Button(onClick = {
+                        showCommentDialog = false
+                        mapViewModel.endAlert("")
+                        commentText = ""
+                    }) { 
+                        Text("Cancelar") 
+                    }
+                    Button(onClick = {
+                        showCommentDialog = false
+                        mapViewModel.endAlert(commentText)
+                        commentText = ""
+                    }) { 
+                        Text("Aceptar") 
+                    }
+                }
+            },
+            dismissButton = { /* Vacío porque los botones están en confirmButton */ },
+            properties = androidx.compose.ui.window.DialogProperties(
+                dismissOnBackPress = false,
+                dismissOnClickOutside = false
+            )
+        )
+    }
+    }
+
 
 
 @Composable

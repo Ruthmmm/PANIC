@@ -18,6 +18,14 @@ import com.example.panico.service.PowerButtonForegroundService
 import com.example.panico.ui.screens.MapScreen
 import com.example.panico.ui.theme.PANICOTheme
 import com.google.firebase.FirebaseApp
+import com.example.panico.ui.screens.LoginScreen
+import com.google.firebase.auth.FirebaseAuth
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import android.util.Log
 
 class MainActivity : ComponentActivity() {
     private val requiredPermissions = arrayOf(
@@ -45,11 +53,16 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private lateinit var auth: FirebaseAuth
+    private var authStateListener: FirebaseAuth.AuthStateListener? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
         // Inicializar Firebase
         FirebaseApp.initializeApp(this)
+        auth = FirebaseAuth.getInstance()
+        Log.d("AUTH_DEBUG", "onCreate: currentUser = ${auth.currentUser}")
         
         // Verificar permisos
         if (hasRequiredPermissions()) {
@@ -64,10 +77,37 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    MapScreen()
+                    AuthContent(auth)
                 }
             }
         }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        if (!::auth.isInitialized) auth = FirebaseAuth.getInstance()
+        if (authStateListener == null) {
+            authStateListener = FirebaseAuth.AuthStateListener {
+                Log.d("AUTH_DEBUG", "AuthStateListener: currentUser = ${auth.currentUser}")
+                // Forzar recomposición
+                setContent {
+                    PANICOTheme {
+                        Surface(
+                            modifier = Modifier.fillMaxSize(),
+                            color = MaterialTheme.colorScheme.background
+                        ) {
+                            AuthContent(auth)
+                }
+            }
+        }
+    }
+}
+        auth.addAuthStateListener(authStateListener!!)
+    }
+
+    override fun onStop() {
+        super.onStop()
+        authStateListener?.let { auth.removeAuthStateListener(it) }
     }
 
     private fun hasRequiredPermissions(): Boolean {
@@ -92,5 +132,15 @@ class MainActivity : ComponentActivity() {
                 Toast.LENGTH_LONG
             ).show()
         }
+    }
+}
+
+@Composable
+fun AuthContent(auth: FirebaseAuth) {
+    // No usar remember ni mutableStateOf aquí
+    if (auth.currentUser == null) {
+        LoginScreen(onLoginSuccess = { /* No-op, AuthStateListener se encarga */ })
+    } else {
+        MapScreen()
     }
 }

@@ -19,6 +19,8 @@ import kotlinx.coroutines.tasks.await
 import java.util.UUID
 import android.util.Log
 import android.widget.Toast
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 class MapViewModel(application: Application) : AndroidViewModel(application) {
     private val db = FirebaseFirestore.getInstance()
@@ -50,6 +52,12 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _userRole = MutableStateFlow("")
     val userRole: StateFlow<String> = _userRole
+
+    private val _alertTypeShown = MutableStateFlow<String>("")
+    val alertTypeShown: StateFlow<String> = _alertTypeShown.asStateFlow()
+
+    private val _alertColor = MutableStateFlow(0xFFD32F2F) // Rojo por defecto
+    val alertColor: StateFlow<Long> = _alertColor.asStateFlow()
 
     fun loadAlerts() {
         val currentUser = FirebaseAuth.getInstance().currentUser ?: return
@@ -115,7 +123,7 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun sendAlert() {
+    fun sendAlert(fromPowerButton: Boolean = false) {
         val currentUser = FirebaseAuth.getInstance().currentUser ?: return
         val userId = currentUser.uid
         viewModelScope.launch {
@@ -127,34 +135,39 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
                     _showAlertSentToast.value = false
                     return@launch
                 }
-
-                // Buscar alerta activa previa del usuario
-                val activeAlerts = db.collection("alerts")
-                    .whereEqualTo("active", true)
-                    .whereEqualTo("userId", userId)
-                    .get().await()
-
-                // Marcar como reemplazada cualquier alerta activa previa
-                for (doc in activeAlerts.documents) {
-                    db.collection("alerts").document(doc.id)
-                        .update("active", false, "status", "reemplazada")
+                // Reemplazar cualquier alerta activa previa
+                replaceActiveAlerts(userId)
+                val alertTypeName = if (fromPowerButton) "ALERTA CRÍTICA" else "ALERTA URGENTE"
+                val alertTypeId = withContext(Dispatchers.IO) { getAlertTypeIdByName(alertTypeName) } ?: ""
+                val groupId = withContext(Dispatchers.IO) { getCurrentUserGroupId() } ?: ""
+                Log.d("MapViewModel", "userId=$userId")
+                Log.d("MapViewModel", "groupId from user doc: $groupId")
+                Log.d("MapViewModel", "alertTypeId from alertTypes: $alertTypeId")
+                if (alertTypeId.isBlank() || groupId.isBlank() || userId.isBlank()) {
+                    _errorMessage.value = "Error: Faltan datos para crear la alerta. userId=$userId, groupId=$groupId, alertTypeId=$alertTypeId"
+                    _showAlertSentToast.value = false
+                    return@launch
                 }
-
-                // Crear la nueva alerta
+                val observation = if (fromPowerButton) "enviado desde el botón de encendido" else "alerta enviada desde botón"
                 val alert = Alert(
                     id = UUID.randomUUID().toString(),
                     active = true,
                     userId = userId,
+                    groupId = groupId,
+                    alertTypeId = alertTypeId,
                     location = GeoPoint(location.latitude, location.longitude),
                     timestamp = Timestamp.now(),
-                    message = "Alerta de emergencia",
-                    status = "active"
+                    message = "",
+                    status = "active",
+                    observation = observation
                 )
-                val ref = db.collection("alerts").add(alert).await()
-                _lastAlertId.value = ref.id
-                _alertSent.value = true
-                _errorMessage.value = null
-                _showAlertSentToast.value = true
+                db.collection("alerts").add(alert).await()
+                _lastAlertId.value = alert.id
+                _alertTypeShown.value = alertTypeName // <-- siempre se actualiza correctamente
+                _alertColor.value = 0xFFD32F2F // Rojo
+                // Actualización optimista
+                _alerts.value = listOf(alert)
+                loadAlerts() // <-- Forzar refresco de la UI
             } catch (e: Exception) {
                 e.printStackTrace()
                 _errorMessage.value = "Error al enviar la alerta: ${e.localizedMessage}"
@@ -163,12 +176,78 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun endAlert() {
+    fun sendSpecificAlert(typeName: String, fromPowerButton: Boolean = false) {
+        val currentUser = FirebaseAuth.getInstance().currentUser ?: return
+        val userId = currentUser.uid
+        viewModelScope.launch {
+            try {
+                val fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
+                val location = fusedLocationClient.lastLocation.await()
+                if (location == null) {
+                    _errorMessage.value = "No se pudo obtener la ubicación."
+                    _showAlertSentToast.value = false
+                    return@launch
+                }
+                // Reemplazar cualquier alerta activa previa
+                replaceActiveAlerts(userId)
+                val alertTypeId = withContext(Dispatchers.IO) { getAlertTypeIdByName(typeName) } ?: ""
+                val groupId = withContext(Dispatchers.IO) { getCurrentUserGroupId() } ?: ""
+                Log.d("MapViewModel", "userId=$userId")
+                Log.d("MapViewModel", "groupId from user doc: $groupId")
+                Log.d("MapViewModel", "alertTypeId from alertTypes: $alertTypeId")
+                if (alertTypeId.isBlank() || groupId.isBlank() || userId.isBlank()) {
+                    _errorMessage.value = "Error: Faltan datos para crear la alerta. userId=$userId, groupId=$groupId, alertTypeId=$alertTypeId"
+                    _showAlertSentToast.value = false
+                    return@launch
+                }
+                val color = when (typeName) {
+                    "INCENDIO" -> 0xFFFF9800
+                    "ACCIDENTE VEHICULAR" -> 0xFF2196F3
+                    "VIOLENCIA INTRAFAMILIAR" -> 0xFF9C27B0
+                    "DESMAYO" -> 0xFF009688
+                    "ROBO" -> 0xFFFFC107
+                    else -> 0xFF888888
+                }
+                val observation = if (fromPowerButton) "enviado desde el botón de encendido" else "enviado desde botón de alerta"
+                val alert = Alert(
+                    id = UUID.randomUUID().toString(),
+                    active = true,
+                    userId = userId,
+                    groupId = groupId,
+                    alertTypeId = alertTypeId,
+                    location = GeoPoint(location.latitude, location.longitude),
+                    timestamp = Timestamp.now(),
+                    message = "",
+                    status = "active",
+                    observation = observation
+                )
+                db.collection("alerts").add(alert).await()
+                _lastAlertId.value = alert.id
+                _alertTypeShown.value = typeName
+                _alertColor.value = color
+                // Actualización optimista
+                _alerts.value = listOf(alert)
+                loadAlerts() // <-- Forzar refresco de la UI
+            } catch (e: Exception) {
+                e.printStackTrace()
+                _errorMessage.value = "Error al enviar la alerta: ${e.localizedMessage}"
+                _showAlertSentToast.value = false
+            }
+        }
+    }
+
+    fun endAlert(message: String = "") {
         viewModelScope.launch {
             try {
                 val alertId = _lastAlertId.value
                 if (alertId != null) {
-                    db.collection("alerts").document(alertId).update("active", false, "status", "terminado")
+                    db.collection("alerts").document(alertId).update(
+                        mapOf(
+                            "active" to false,
+                            "status" to "terminado",
+                            "message" to message
+                        )
+                    )
                     _alertSent.value = false
                     _lastAlertId.value = null
                 }
@@ -180,5 +259,27 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
 
     fun resetShowAlertSentToast() {
         _showAlertSentToast.value = false
+    }
+
+    private suspend fun replaceActiveAlerts(userId: String) {
+        val activeAlerts = db.collection("alerts")
+            .whereEqualTo("active", true)
+            .whereEqualTo("userId", userId)
+            .get().await()
+
+        for (doc in activeAlerts.documents) {
+            db.collection("alerts").document(doc.id)
+                .update("active", false, "status", "reemplazada")
+        }
+    }
+
+    private suspend fun getAlertTypeIdByName(name: String): String? {
+        val alertTypesSnapshot = db.collection("alertTypes").get().await()
+        return alertTypesSnapshot.documents.firstOrNull { it.getString("name") == name }?.id
+    }
+
+    private suspend fun getCurrentUserGroupId(): String? {
+        val userDoc = db.collection("users").document(FirebaseAuth.getInstance().currentUser?.uid ?: "").get().await()
+        return userDoc.getString("groupId")
     }
 } 
