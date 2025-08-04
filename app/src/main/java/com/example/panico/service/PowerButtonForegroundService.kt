@@ -14,6 +14,7 @@ import android.os.SystemClock
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
+import android.util.Log
 import com.google.android.gms.location.LocationServices
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FirebaseFirestore
@@ -45,11 +46,14 @@ class PowerButtonForegroundService : Service() {
 
     private val screenReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
+            Log.d("PowerButtonService", "Screen event received: ${intent.action}")
+            
             if (intent.action == Intent.ACTION_SCREEN_OFF || intent.action == Intent.ACTION_SCREEN_ON) {
                 val currentTime = SystemClock.elapsedRealtime()
                 
                 // Si ha pasado mucho tiempo desde la última pulsación, reiniciar contador
                 if (currentTime - lastPressTime > maxTimeBetweenPresses && pressCount > 0) {
+                    Log.d("PowerButtonService", "Resetting counter due to timeout")
                     pressCount = 0
                     timestamps = LongArray(requiredPresses) { 0L }
                 }
@@ -59,28 +63,36 @@ class PowerButtonForegroundService : Service() {
                     timestamps[pressCount] = currentTime
                     pressCount++
                     lastPressTime = currentTime
+                    Log.d("PowerButtonService", "Press registered: $pressCount/$requiredPresses")
                 }
                 
                 // Verificar si tenemos suficientes pulsaciones y están dentro del tiempo límite
                 if (pressCount == requiredPresses && !isProcessing) {
+                    Log.d("PowerButtonService", "Checking if press sequence is valid")
+                    
                     // Verificar que todas las pulsaciones estén dentro del límite de tiempo
                     val isValid = (1 until requiredPresses).all { i ->
                         timestamps[i] - timestamps[i-1] <= maxTimeBetweenPresses
                     }
                     
                     if (isValid) {
+                        Log.d("PowerButtonService", "Valid press sequence detected, sending alert")
                         isProcessing = true
                         serviceScope.launch {
                             try {
                                 sendAlertAndVibrate()
+                            } catch (e: Exception) {
+                                Log.e("PowerButtonService", "Error sending alert: ${e.message}", e)
                             } finally {
                                 // Reiniciar el contador después de procesar
                                 pressCount = 0
                                 timestamps = LongArray(requiredPresses) { 0L }
                                 isProcessing = false
+                                Log.d("PowerButtonService", "Alert processing completed, counter reset")
                             }
                         }
                     } else {
+                        Log.d("PowerButtonService", "Invalid press sequence, resetting counter")
                         // Si las pulsaciones no son válidas, reiniciar contador
                         pressCount = 0
                         timestamps = LongArray(requiredPresses) { 0L }
@@ -94,28 +106,59 @@ class PowerButtonForegroundService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        createNotificationChannel()
-        val notification: Notification = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            Notification.Builder(this, channelId)
-                .setContentTitle("Protección de emergencia activa")
-                .setContentText("La app está escuchando pulsaciones del botón de encendido")
-                .setSmallIcon(android.R.drawable.ic_lock_lock)
-                .build()
-        } else {
-            Notification.Builder(this)
-                .setContentTitle("Protección de emergencia activa")
-                .setContentText("La app está escuchando pulsaciones del botón de encendido")
-                .setSmallIcon(android.R.drawable.ic_lock_lock)
-                .build()
-        }
-        startForeground(notificationId, notification)
+        Log.d("PowerButtonService", "Service onCreate called")
         
-        // Registrar receiver dinámico
-        val filter = IntentFilter().apply {
-            addAction(Intent.ACTION_SCREEN_ON)
-            addAction(Intent.ACTION_SCREEN_OFF)
+        try {
+            createNotificationChannel()
+            val notification: Notification = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                Notification.Builder(this, channelId)
+                    .setContentTitle("Protección de emergencia activa")
+                    .setContentText("La app está escuchando pulsaciones del botón de encendido")
+                    .setSmallIcon(android.R.drawable.ic_lock_lock)
+                    .setOngoing(true) // Hacer la notificación persistente
+                    .setPriority(Notification.PRIORITY_HIGH)
+                    .build()
+            } else {
+                Notification.Builder(this)
+                    .setContentTitle("Protección de emergencia activa")
+                    .setContentText("La app está escuchando pulsaciones del botón de encendido")
+                    .setSmallIcon(android.R.drawable.ic_lock_lock)
+                    .setOngoing(true) // Hacer la notificación persistente
+                    .setPriority(Notification.PRIORITY_HIGH)
+                    .build()
+            }
+            startForeground(notificationId, notification)
+            Log.d("PowerButtonService", "Foreground service started successfully")
+            
+            // Registrar receiver dinámico
+            val filter = IntentFilter().apply {
+                addAction(Intent.ACTION_SCREEN_ON)
+                addAction(Intent.ACTION_SCREEN_OFF)
+            }
+            registerReceiver(screenReceiver, filter)
+            Log.d("PowerButtonService", "Screen receiver registered")
+            
+        } catch (e: Exception) {
+            Log.e("PowerButtonService", "Error in onCreate: ${e.message}", e)
         }
-        registerReceiver(screenReceiver, filter)
+    }
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        Log.d("PowerButtonService", "Service onStartCommand called")
+        // Retornar START_STICKY para que el sistema reinicie el servicio si es eliminado
+        return START_STICKY
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        Log.d("PowerButtonService", "Service onDestroy called")
+        try {
+            unregisterReceiver(screenReceiver)
+            Log.d("PowerButtonService", "Screen receiver unregistered")
+        } catch (e: Exception) {
+            Log.e("PowerButtonService", "Error unregistering receiver: ${e.message}", e)
+        }
+        serviceJob.cancel()
     }
 
     private suspend fun getCurrentUserGroupId(userId: String): String? {
@@ -201,15 +244,5 @@ class PowerButtonForegroundService : Service() {
             val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             manager.createNotificationChannel(channel)
         }
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        unregisterReceiver(screenReceiver)
-        serviceJob.cancel()
-    }
-
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        return START_STICKY
     }
 } 

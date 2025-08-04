@@ -1,0 +1,65 @@
+TÉRMINOS Y CONDICIONES - APLICACIÓN PANICO
+
+1. ACEPTACIÓN DE TÉRMINOS
+Al utilizar la aplicación PANICO, usted acepta estar sujeto a estos términos y condiciones. Si no está de acuerdo con alguna parte de estos términos, no debe utilizar la aplicación.
+
+2. DESCRIPCIÓN DEL SERVICIO
+PANICO es una aplicación de emergencia diseñada para enviar alertas de seguridad a grupos predefinidos. La aplicación permite:
+- Envío de alertas de emergencia
+- Notificación a contactos de confianza
+- Geolocalización en situaciones de emergencia
+- Gestión de grupos de seguridad
+
+3. USO RESPONSABLE
+3.1 Usted se compromete a utilizar la aplicación únicamente para situaciones de emergencia reales.
+3.2 No debe enviar alertas falsas o por broma.
+3.3 El uso indebido de la aplicación puede resultar en sanciones legales.
+3.4 Usted es responsable de todas las actividades realizadas desde su cuenta.
+
+4. PRIVACIDAD Y DATOS PERSONALES
+4.1 La aplicación recopila y procesa datos personales según nuestra Política de Privacidad.
+4.2 Sus datos de ubicación se utilizan únicamente para el envío de alertas de emergencia.
+4.3 La información se almacena de forma segura y se utiliza solo para los fines establecidos.
+4.4 Puede solicitar la eliminación de sus datos en cualquier momento.
+
+5. PERMISOS DE LA APLICACIÓN
+5.1 Ubicación: Necesario para enviar alertas con su ubicación exacta.
+5.2 Contactos: Para notificar a sus contactos de emergencia.
+5.3 Notificaciones: Para recibir alertas y actualizaciones importantes.
+5.4 Almacenamiento: Para guardar configuraciones y datos de la aplicación.
+
+6. LIMITACIONES DEL SERVICIO
+6.1 La aplicación funciona según la disponibilidad de servicios de red.
+6.2 No garantizamos la disponibilidad ininterrumpida del servicio.
+6.3 La precisión de la geolocalización depende de factores externos.
+6.4 El tiempo de respuesta puede variar según las condiciones de red.
+
+7. RESPONSABILIDADES
+7.1 La aplicación es una herramienta de apoyo y no reemplaza los servicios de emergencia oficiales.
+7.2 En caso de emergencia real, contacte inmediatamente a los servicios de emergencia locales.
+7.3 No nos hacemos responsables por daños directos o indirectos derivados del uso de la aplicación.
+7.4 Usted es responsable de mantener actualizada su información de contacto.
+
+8. SEGURIDAD
+8.1 Mantenga su cuenta segura y no comparta sus credenciales.
+8.2 Notifique inmediatamente cualquier uso no autorizado de su cuenta.
+8.3 La aplicación implementa medidas de seguridad, pero no garantizamos protección absoluta.
+
+9. MODIFICACIONES
+9.1 Nos reservamos el derecho de modificar estos términos en cualquier momento.
+9.2 Los cambios serán notificados a través de la aplicación.
+9.3 El uso continuado de la aplicación después de los cambios constituye aceptación.
+
+10. CONTACTO
+Para preguntas sobre estos términos, contacte a:
+- Email: soporte@panico-app.com
+- Teléfono: +51 999 999 999
+- Horario: Lunes a Viernes 9:00 AM - 6:00 PM
+
+11. LEGISLACIÓN APLICABLE
+Estos términos se rigen por las leyes de Perú y cualquier disputa será resuelta en los tribunales competentes de Lima, Perú.
+
+12. VERSIÓN
+Estos términos y condiciones corresponden a la versión 1.0 de la aplicación PANICO.
+
+Última actualización: [Fecha actual] 

@@ -213,6 +213,12 @@ fun MapScreen() {
     var showConfirmEndAlert by remember { mutableStateOf(false) }
     var showCommentDialog by remember { mutableStateOf(false) }
     var commentText by remember { mutableStateOf("") }
+    
+    // Estado para mostrar términos y condiciones
+    var showTermsAndConditions by remember { mutableStateOf(false) }
+    
+    // Estado para mostrar historial de alertas
+    var showAlertHistory by remember { mutableStateOf(false) }
 
     Box(Modifier.fillMaxSize()) {
         // Scrim
@@ -280,7 +286,16 @@ fun MapScreen() {
                             }
                         },
                         selected = false, // Nunca sombreado permanente
-                        onClick = { selectedItem = index },
+                        onClick = { 
+                            selectedItem = index
+                            when (triple.first) {
+                                "Historial de alertas" -> {
+                                    showAlertHistory = true
+                                    drawerOpen = false
+                                }
+                                // Agregar más casos según sea necesario
+                            }
+                        },
                         modifier = Modifier
                             .padding(NavigationDrawerItemDefaults.ItemPadding),
                         interactionSource = interactionSource
@@ -293,8 +308,7 @@ fun MapScreen() {
                         .align(Alignment.CenterHorizontally)
                         .padding(bottom = 24.dp)
                         .clickable { 
-                            // Aquí puedes agregar la acción cuando se haga clic en términos y condiciones
-                            // Por ejemplo, abrir una pantalla o mostrar un diálogo
+                            showTermsAndConditions = true
                         },
                     fontStyle = FontStyle.Italic,
                     fontSize = 13.sp,
@@ -520,7 +534,22 @@ fun MapScreen() {
             )
         )
     }
+
+    if (showTermsAndConditions) {
+        TermsAndConditionsScreen(
+            onBackPressed = { showTermsAndConditions = false }
+        )
     }
+    
+    // Mostrar pantalla de historial de alertas
+    if (showAlertHistory) {
+        AlertHistoryScreen(
+            onBackPressed = { showAlertHistory = false }
+        )
+    }
+    }
+    
+    // Mostrar pantalla de términos y condiciones
 
 
 
