@@ -11,6 +11,7 @@ data class Alert(
     val alertTypeId: String = "",
     val location: GeoPoint? = null,
     val timestamp: Timestamp = Timestamp.now(),
+    val endTimestamp: Timestamp? = null,
     val message: String = "",
     val status: String = "active",
     val observation: String = ""

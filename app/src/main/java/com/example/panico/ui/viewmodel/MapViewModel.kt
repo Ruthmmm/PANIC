@@ -245,7 +245,8 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
                         mapOf(
                             "active" to false,
                             "status" to "terminado",
-                            "message" to message
+                            "message" to message,
+                            "endTimestamp" to Timestamp.now()
                         )
                     )
                     _alertSent.value = false
@@ -281,5 +282,17 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
     private suspend fun getCurrentUserGroupId(): String? {
         val userDoc = db.collection("users").document(FirebaseAuth.getInstance().currentUser?.uid ?: "").get().await()
         return userDoc.getString("groupId")
+    }
+
+    fun centerMapOnLocation(latitude: Double, longitude: Double) {
+        viewModelScope.launch {
+            try {
+                val location = com.google.android.gms.maps.model.LatLng(latitude, longitude)
+                _userLocation.value = location
+                _cameraPosition.value = CameraPosition.fromLatLngZoom(location, 15f)
+            } catch (e: Exception) {
+                Log.e("MapViewModel", "Error centering map: ${e.message}")
+            }
+        }
     }
 } 

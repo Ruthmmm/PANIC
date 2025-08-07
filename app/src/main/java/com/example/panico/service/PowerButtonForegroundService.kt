@@ -109,33 +109,33 @@ class PowerButtonForegroundService : Service() {
         Log.d("PowerButtonService", "Service onCreate called")
         
         try {
-            createNotificationChannel()
-            val notification: Notification = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                Notification.Builder(this, channelId)
-                    .setContentTitle("Protección de emergencia activa")
-                    .setContentText("La app está escuchando pulsaciones del botón de encendido")
-                    .setSmallIcon(android.R.drawable.ic_lock_lock)
+        createNotificationChannel()
+        val notification: Notification = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            Notification.Builder(this, channelId)
+                .setContentTitle("Protección de emergencia activa")
+                .setContentText("La app está escuchando pulsaciones del botón de encendido")
+                .setSmallIcon(android.R.drawable.ic_lock_lock)
                     .setOngoing(true) // Hacer la notificación persistente
                     .setPriority(Notification.PRIORITY_HIGH)
-                    .build()
-            } else {
-                Notification.Builder(this)
-                    .setContentTitle("Protección de emergencia activa")
-                    .setContentText("La app está escuchando pulsaciones del botón de encendido")
-                    .setSmallIcon(android.R.drawable.ic_lock_lock)
+                .build()
+        } else {
+            Notification.Builder(this)
+                .setContentTitle("Protección de emergencia activa")
+                .setContentText("La app está escuchando pulsaciones del botón de encendido")
+                .setSmallIcon(android.R.drawable.ic_lock_lock)
                     .setOngoing(true) // Hacer la notificación persistente
                     .setPriority(Notification.PRIORITY_HIGH)
-                    .build()
-            }
-            startForeground(notificationId, notification)
+                .build()
+        }
+        startForeground(notificationId, notification)
             Log.d("PowerButtonService", "Foreground service started successfully")
-            
-            // Registrar receiver dinámico
-            val filter = IntentFilter().apply {
-                addAction(Intent.ACTION_SCREEN_ON)
-                addAction(Intent.ACTION_SCREEN_OFF)
-            }
-            registerReceiver(screenReceiver, filter)
+        
+        // Registrar receiver dinámico
+        val filter = IntentFilter().apply {
+            addAction(Intent.ACTION_SCREEN_ON)
+            addAction(Intent.ACTION_SCREEN_OFF)
+        }
+        registerReceiver(screenReceiver, filter)
             Log.d("PowerButtonService", "Screen receiver registered")
             
         } catch (e: Exception) {

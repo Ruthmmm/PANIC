@@ -97,6 +97,11 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
+import com.example.panico.ui.screens.TermsAndConditionsScreen
+import com.example.panico.ui.screens.AlertHistoryScreen
+import com.example.panico.ui.screens.ActiveAlertsScreen
+import com.example.panico.ui.screens.AlertLocationScreen
+import com.example.panico.data.models.Alert
 
 
 @OptIn(ExperimentalPermissionsApi::class, androidx.compose.material3.ExperimentalMaterial3Api::class)
@@ -214,11 +219,12 @@ fun MapScreen() {
     var showCommentDialog by remember { mutableStateOf(false) }
     var commentText by remember { mutableStateOf("") }
     
-    // Estado para mostrar términos y condiciones
+    // Estados para navegación
     var showTermsAndConditions by remember { mutableStateOf(false) }
-    
-    // Estado para mostrar historial de alertas
     var showAlertHistory by remember { mutableStateOf(false) }
+    var showActiveAlerts by remember { mutableStateOf(false) }
+    var showAlertLocation by remember { mutableStateOf(false) }
+    var selectedAlert by remember { mutableStateOf<Alert?>(null) }
 
     Box(Modifier.fillMaxSize()) {
         // Scrim
@@ -291,6 +297,10 @@ fun MapScreen() {
                             when (triple.first) {
                                 "Historial de alertas" -> {
                                     showAlertHistory = true
+                                    drawerOpen = false
+                                }
+                                "Alertas activas" -> {
+                                    showActiveAlerts = true
                                     drawerOpen = false
                                 }
                                 // Agregar más casos según sea necesario
@@ -544,7 +554,41 @@ fun MapScreen() {
     // Mostrar pantalla de historial de alertas
     if (showAlertHistory) {
         AlertHistoryScreen(
-            onBackPressed = { showAlertHistory = false }
+            onBackPressed = { 
+                showAlertHistory = false
+                drawerOpen = true
+            }
+        )
+    }
+
+    // Mostrar pantalla de alertas activas
+    if (showActiveAlerts) {
+        ActiveAlertsScreen(
+            onBackPressed = { 
+                showActiveAlerts = false
+                drawerOpen = true
+            },
+            onViewLocation = { alert ->
+                selectedAlert = alert
+                showAlertLocation = true
+                showActiveAlerts = false
+            },
+            onAlertTerminated = {
+                // Recargar alertas en la pantalla principal cuando se termina una alerta
+                mapViewModel.loadAlerts()
+            }
+        )
+    }
+    
+    // Mostrar pantalla de ubicación de alerta
+    if (showAlertLocation && selectedAlert != null) {
+        AlertLocationScreen(
+            alert = selectedAlert!!,
+            onBackPressed = { 
+                showAlertLocation = false
+                selectedAlert = null
+                showActiveAlerts = true
+            }
         )
     }
     }
